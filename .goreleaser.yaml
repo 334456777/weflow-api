@@ -1,0 +1,57 @@
+version: 2
+
+project_name: weflow
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: weflow
+    main: ./
+    binary: weflow
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/334456777/weflow-api/internal/version.Version={{.Version}}
+      - -X github.com/334456777/weflow-api/internal/version.Commit={{.Commit}}
+      - -X github.com/334456777/weflow-api/internal/version.Date={{.Date}}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  disable: false
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
+      - "^test:"
+
+release:
+  draft: false
+  prerelease: auto
