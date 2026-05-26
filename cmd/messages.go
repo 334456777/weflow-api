@@ -79,6 +79,15 @@ var messagesCmd = &cobra.Command{
 				} else {
 					all.Messages = append(all.Messages, resp.Messages...)
 				}
+				// 首次返回空时重试一次（API 预热）
+				if page == 1 && len(resp.Messages) == 0 {
+					fmt.Fprintln(os.Stderr, "首次请求返回空，重试中...")
+					resp, err = c.MessagesChatLab(cmd.Context(), p)
+					if err != nil {
+						return err
+					}
+					all.Messages = resp.Messages
+				}
 				hasMore := resp.Sync != nil && resp.Sync.HasMore
 				if !autoPage || !hasMore {
 					break
@@ -99,6 +108,15 @@ var messagesCmd = &cobra.Command{
 			} else {
 				all.Messages = append(all.Messages, resp.Messages...)
 			}
+			// 首次返回空时重试一次（API 预热）
+			if page == 1 && len(resp.Messages) == 0 {
+				fmt.Fprintln(os.Stderr, "首次请求返回空，重试中...")
+				resp, err = c.Messages(cmd.Context(), p)
+				if err != nil {
+					return err
+				}
+				all.Messages = resp.Messages
+			}
 			if !autoPage || !resp.HasMore {
 				break
 			}
@@ -115,7 +133,7 @@ func init() {
 	f.IntVar(&msgLimit, "limit", 0, "返回条数；不传或 0 时按 start/end 自动翻页拉全部（页大小 1000），传 1~10000 则单次返回该数")
 	f.IntVar(&msgOffset, "offset", 0, "分页偏移")
 	f.StringVar(&msgStart, "start", "", "开始时间（YYYYMMDD 或时间戳）")
-	f.StringVar(&msgEnd, "end", "", "结束时间（YYYYMMDD 自动扩到当天 23:59:59，或直接传时间戳）")
+	f.StringVar(&msgEnd, "end", "", "结束时间（YYYYMMDD 自动扩到次日 00:00:00，或直接传时间戳）")
 	f.StringVar(&msgKeyword, "keyword", "", "关键词过滤")
 	f.BoolVar(&msgChatLab, "chatlab", false, "返回 ChatLab 格式")
 	f.BoolVar(&msgMedia, "media", false, "导出并返回媒体地址")
