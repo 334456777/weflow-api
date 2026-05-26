@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/334456777/weflow-api/internal/client"
 	"github.com/334456777/weflow-api/internal/config"
@@ -100,7 +101,13 @@ func (r *TextRenderer) Messages(v *client.MessagesResponse) error {
 
 func (r *TextRenderer) MessagesChatLab(v *client.ChatLabMessagesResponse) error {
 	for _, m := range reverse(v.Messages) {
-		fmt.Fprintf(r.w, "[%s] %s: %s\n", UnixSec(m.Timestamp), r.formatName(m.AccountName, m.GroupNickname), FormatContent(m.Content))
+		content := FormatContent(m.Content)
+		// 撤回等系统消息已包含操作人，不再重复显示发送者
+		if strings.HasPrefix(content, "[") && strings.Contains(content, "撤回了一条消息") {
+			fmt.Fprintf(r.w, "[%s] %s\n", UnixSec(m.Timestamp), content)
+		} else {
+			fmt.Fprintf(r.w, "[%s] %s: %s\n", UnixSec(m.Timestamp), r.formatName(m.AccountName, m.GroupNickname), content)
+		}
 	}
 	return nil
 }
