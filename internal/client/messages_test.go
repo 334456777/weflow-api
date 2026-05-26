@@ -12,7 +12,7 @@ func TestExpandEndDay(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected unix timestamp, got %q: %v", got, err)
 	}
-	want := time.Date(2026, 5, 27, 23, 59, 59, 0, time.Local).Unix()
+	want := time.Date(2026, 5, 28, 0, 0, 0, 0, time.Local).Unix()
 	if ts != want {
 		t.Errorf("expandEndDay(20260527) = %d, want %d", ts, want)
 	}

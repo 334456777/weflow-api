@@ -111,8 +111,8 @@ type MessagesParams struct {
 	Emoji   *bool
 }
 
-// expandEndDay 把纯 YYYYMMDD 的 end 扩展到当天 23:59:59 的秒级时间戳。
-// /api/v1/messages 默认把 YYYYMMDD 当 00:00:00 处理，会漏掉当天数据。
+// expandEndDay 把纯 YYYYMMDD 的 end 扩展到次日 00:00:00 的秒级时间戳。
+// 例如 20260526 → 2026-05-27 00:00:00，确保包含 end 当天全部数据。
 func expandEndDay(end string) string {
 	if len(end) != 8 {
 		return end
@@ -126,7 +126,7 @@ func expandEndDay(end string) string {
 	if err != nil {
 		return end
 	}
-	return strconv.FormatInt(t.Add(24*time.Hour-time.Second).Unix(), 10)
+	return strconv.FormatInt(t.Add(24*time.Hour).Unix(), 10)
 }
 
 func addOptBool(q url.Values, k string, b *bool) {
