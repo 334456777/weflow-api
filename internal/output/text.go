@@ -76,8 +76,15 @@ func (r *TextRenderer) SessionsChatLab(v *client.ChatLabSessionsResponse) error 
 	return nil
 }
 
+func reverse[T any](s []T) []T {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
+}
+
 func (r *TextRenderer) Messages(v *client.MessagesResponse) error {
-	for _, m := range v.Messages {
+	for _, m := range reverse(v.Messages) {
 		content := m.ParsedContent
 		if content == "" {
 			content = m.Content
@@ -92,7 +99,7 @@ func (r *TextRenderer) Messages(v *client.MessagesResponse) error {
 }
 
 func (r *TextRenderer) MessagesChatLab(v *client.ChatLabMessagesResponse) error {
-	for _, m := range v.Messages {
+	for _, m := range reverse(v.Messages) {
 		fmt.Fprintf(r.w, "[%s] %s: %s\n", UnixSec(m.Timestamp), r.formatName(m.AccountName, m.GroupNickname), FormatContent(m.Content))
 	}
 	return nil
