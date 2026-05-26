@@ -90,11 +90,17 @@ func (r *TextRenderer) Messages(v *client.MessagesResponse) error {
 		if content == "" {
 			content = m.Content
 		}
-		who := m.SenderUsername
-		if m.IsSend == 1 {
-			who = "[我] " + who
+		content = FormatContent(content)
+		// 系统消息的 sender 是 chatroom ID，内容已包含操作人
+		if strings.Contains(m.SenderUsername, "@chatroom") {
+			fmt.Fprintf(r.w, "[%s] %s\n", UnixSec(m.CreateTime), content)
+		} else {
+			who := m.SenderUsername
+			if m.IsSend == 1 {
+				who = "[我] " + who
+			}
+			fmt.Fprintf(r.w, "[%s] %s: %s\n", UnixSec(m.CreateTime), who, content)
 		}
-		fmt.Fprintf(r.w, "[%s] %s: %s\n", UnixSec(m.CreateTime), who, FormatContent(content))
 	}
 	return nil
 }
@@ -102,8 +108,8 @@ func (r *TextRenderer) Messages(v *client.MessagesResponse) error {
 func (r *TextRenderer) MessagesChatLab(v *client.ChatLabMessagesResponse) error {
 	for _, m := range reverse(v.Messages) {
 		content := FormatContent(m.Content)
-		// 撤回等系统消息已包含操作人，不再重复显示发送者
-		if strings.HasPrefix(content, "[") && strings.Contains(content, "撤回了一条消息") {
+		// 系统消息的 AccountName 是 chatroom ID，内容已包含操作人，不重复显示发送者
+		if strings.Contains(m.AccountName, "@chatroom") {
 			fmt.Fprintf(r.w, "[%s] %s\n", UnixSec(m.Timestamp), content)
 		} else {
 			fmt.Fprintf(r.w, "[%s] %s: %s\n", UnixSec(m.Timestamp), r.formatName(m.AccountName, m.GroupNickname), content)
