@@ -28,7 +28,7 @@ release:
 	goreleaser release --clean
 
 install: build
-	install -m 0755 weflow $${GOBIN:-$$HOME/go/bin}/weflow
+	sudo install -m 0755 weflow /usr/local/bin/weflow
 
 clean:
 	rm -rf dist weflow weflow.exe
