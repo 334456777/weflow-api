@@ -86,13 +86,26 @@ type appShareXML struct {
 	} `xml:"appinfo"`
 }
 
-// FormatContent 把微信 XML 卡片（链接/小程序/B站分享等）提取成简洁文本。
+type revokeXML struct {
+	XMLName  xml.Name `xml:"sysmsg"`
+	RevokeMsg struct {
+		Content string `xml:"content"`
+	} `xml:"revokemsg"`
+}
+
+// FormatContent 把微信 XML 卡片（链接/小程序/B站分享等）和撤回消息提取成简洁文本。
 // 非 XML 内容原样返回。
 func FormatContent(content string) string {
 	trimmed := strings.TrimSpace(content)
 	if !strings.HasPrefix(trimmed, "<?xml") && !strings.HasPrefix(trimmed, "<msg>") {
 		return content
 	}
+	// 撤回消息
+	var rv revokeXML
+	if err := xml.Unmarshal([]byte(trimmed), &rv); err == nil && rv.RevokeMsg.Content != "" {
+		return "[" + strings.TrimSpace(rv.RevokeMsg.Content) + "]"
+	}
+	// 分享卡片
 	var m appShareXML
 	if err := xml.Unmarshal([]byte(trimmed), &m); err != nil {
 		return content
