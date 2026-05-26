@@ -86,14 +86,14 @@ func (r *TextRenderer) Messages(v *client.MessagesResponse) error {
 		if m.IsSend == 1 {
 			who = "[我] " + who
 		}
-		fmt.Fprintf(r.w, "[%s] %s: %s\n", UnixSec(m.CreateTime), who, content)
+		fmt.Fprintf(r.w, "[%s] %s: %s\n", UnixSec(m.CreateTime), who, FormatContent(content))
 	}
 	return nil
 }
 
 func (r *TextRenderer) MessagesChatLab(v *client.ChatLabMessagesResponse) error {
 	for _, m := range v.Messages {
-		fmt.Fprintf(r.w, "[%s] %s: %s\n", UnixSec(m.Timestamp), r.formatName(m.AccountName, m.GroupNickname), m.Content)
+		fmt.Fprintf(r.w, "[%s] %s: %s\n", UnixSec(m.Timestamp), r.formatName(m.AccountName, m.GroupNickname), FormatContent(m.Content))
 	}
 	return nil
 }
@@ -134,6 +134,7 @@ func (r *TextRenderer) Event(e client.Event) error {
 			source, _ := m["sourceName"].(string)
 			group, _ := m["groupName"].(string)
 			content, _ := m["content"].(string)
+			content = FormatContent(content)
 			tsStr := "-"
 			if ts, ok := m["timestamp"].(float64); ok && ts > 0 {
 				tsStr = UnixSec(int64(ts))

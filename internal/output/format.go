@@ -3,6 +3,7 @@ package output
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"strings"
 	"time"
@@ -71,6 +72,53 @@ func IndentJSON(b []byte) (string, error) {
 		return "", fmt.Errorf("格式化 JSON: %w", err)
 	}
 	return buf.String(), nil
+}
+
+type appShareXML struct {
+	XMLName xml.Name `xml:"msg"`
+	AppMsg  struct {
+		Title string `xml:"title"`
+		Des   string `xml:"des"`
+		URL   string `xml:"url"`
+	} `xml:"appmsg"`
+	AppInfo struct {
+		AppName string `xml:"appname"`
+	} `xml:"appinfo"`
+}
+
+// FormatContent 把微信 XML 卡片（链接/小程序/B站分享等）提取成简洁文本。
+// 非 XML 内容原样返回。
+func FormatContent(content string) string {
+	trimmed := strings.TrimSpace(content)
+	if !strings.HasPrefix(trimmed, "<?xml") && !strings.HasPrefix(trimmed, "<msg>") {
+		return content
+	}
+	var m appShareXML
+	if err := xml.Unmarshal([]byte(trimmed), &m); err != nil {
+		return content
+	}
+	title := strings.TrimSpace(m.AppMsg.Title)
+	url := strings.TrimSpace(m.AppMsg.URL)
+	appName := strings.TrimSpace(m.AppInfo.AppName)
+	if title == "" && url == "" {
+		return content
+	}
+	var b strings.Builder
+	if appName != "" {
+		b.WriteString("【")
+		b.WriteString(appName)
+		b.WriteString("】")
+	}
+	if title != "" {
+		b.WriteString(title)
+	}
+	if url != "" {
+		if b.Len() > 0 {
+			b.WriteString(" ")
+		}
+		b.WriteString(url)
+	}
+	return b.String()
 }
 
 // ConfigSummary 把 Config 转成 (key, value) 对列表，供 table 渲染。
