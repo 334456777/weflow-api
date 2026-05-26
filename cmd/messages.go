@@ -80,6 +80,12 @@ var messagesCmd = &cobra.Command{
 					all.Messages = append(all.Messages, resp.Messages...)
 				}
 				hasMore := resp.Sync != nil && resp.Sync.HasMore
+				if hasMore {
+					// §4.2 Pull 接口返回 sync 块，直接用
+				} else if autoPage && len(resp.Messages) >= p.Limit {
+					// §3 接口无 sync，通过返回条数判断是否还有更多
+					hasMore = true
+				}
 				if !autoPage || !hasMore {
 					break
 				}
