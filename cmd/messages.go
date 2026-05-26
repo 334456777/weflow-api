@@ -81,7 +81,7 @@ func init() {
 	f.IntVar(&msgLimit, "limit", 0, "返回条数（默认 100，1~10000）")
 	f.IntVar(&msgOffset, "offset", 0, "分页偏移")
 	f.StringVar(&msgStart, "start", "", "开始时间（YYYYMMDD 或时间戳）")
-	f.StringVar(&msgEnd, "end", "", "结束时间（YYYYMMDD 或时间戳）")
+	f.StringVar(&msgEnd, "end", "", "结束时间（YYYYMMDD 自动扩到当天 23:59:59，或直接传时间戳）")
 	f.StringVar(&msgKeyword, "keyword", "", "关键词过滤")
 	f.BoolVar(&msgChatLab, "chatlab", false, "返回 ChatLab 格式")
 	f.BoolVar(&msgMedia, "media", false, "导出并返回媒体地址")

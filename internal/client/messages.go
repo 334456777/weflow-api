@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 type Message struct {
@@ -110,6 +111,24 @@ type MessagesParams struct {
 	Emoji   *bool
 }
 
+// expandEndDay 把纯 YYYYMMDD 的 end 扩展到当天 23:59:59 的秒级时间戳。
+// /api/v1/messages 默认把 YYYYMMDD 当 00:00:00 处理，会漏掉当天数据。
+func expandEndDay(end string) string {
+	if len(end) != 8 {
+		return end
+	}
+	for _, c := range end {
+		if c < '0' || c > '9' {
+			return end
+		}
+	}
+	t, err := time.ParseInLocation("20060102", end, time.Local)
+	if err != nil {
+		return end
+	}
+	return strconv.FormatInt(t.Add(24*time.Hour-time.Second).Unix(), 10)
+}
+
 func addOptBool(q url.Values, k string, b *bool) {
 	if b == nil {
 		return
@@ -136,7 +155,7 @@ func (p MessagesParams) toQuery(chatlab bool) url.Values {
 		q.Set("start", p.Start)
 	}
 	if p.End != "" {
-		q.Set("end", p.End)
+		q.Set("end", expandEndDay(p.End))
 	}
 	if p.Keyword != "" {
 		q.Set("keyword", p.Keyword)
