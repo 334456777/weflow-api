@@ -2,11 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/334456777/weflow-api/internal/client"
 )
+
+const autoPageSize = 1000
 
 var (
 	msgTalker  string
@@ -46,6 +49,7 @@ var messagesCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		autoPage := msgLimit == 0
 		p := client.MessagesParams{
 			Talker:  msgTalker,
 			Limit:   msgLimit,
@@ -59,26 +63,56 @@ var messagesCmd = &cobra.Command{
 			Video:   parseOptBool(msgVideo),
 			Emoji:   parseOptBool(msgEmoji),
 		}
+		if autoPage {
+			p.Limit = autoPageSize
+		}
 		r := newRenderer()
 		if msgChatLab {
-			resp, err := c.MessagesChatLab(cmd.Context(), p)
+			var all *client.ChatLabMessagesResponse
+			for page := 1; ; page++ {
+				resp, err := c.MessagesChatLab(cmd.Context(), p)
+				if err != nil {
+					return err
+				}
+				if all == nil {
+					all = resp
+				} else {
+					all.Messages = append(all.Messages, resp.Messages...)
+				}
+				hasMore := resp.Sync != nil && resp.Sync.HasMore
+				if !autoPage || !hasMore {
+					break
+				}
+				fmt.Fprintf(os.Stderr, "已拉取 %d 条（第 %d 页），继续...\n", len(all.Messages), page)
+				p.Offset += len(resp.Messages)
+			}
+			return r.MessagesChatLab(all)
+		}
+		var all *client.MessagesResponse
+		for page := 1; ; page++ {
+			resp, err := c.Messages(cmd.Context(), p)
 			if err != nil {
 				return err
 			}
-			return r.MessagesChatLab(resp)
+			if all == nil {
+				all = resp
+			} else {
+				all.Messages = append(all.Messages, resp.Messages...)
+			}
+			if !autoPage || !resp.HasMore {
+				break
+			}
+			fmt.Fprintf(os.Stderr, "已拉取 %d 条（第 %d 页），继续...\n", len(all.Messages), page)
+			p.Offset += len(resp.Messages)
 		}
-		resp, err := c.Messages(cmd.Context(), p)
-		if err != nil {
-			return err
-		}
-		return r.Messages(resp)
+		return r.Messages(all)
 	},
 }
 
 func init() {
 	f := messagesCmd.Flags()
 	f.StringVar(&msgTalker, "talker", "", "会话 ID（私聊 wxid 或群 xxx@chatroom），必填")
-	f.IntVar(&msgLimit, "limit", 0, "返回条数（默认 100，1~10000）")
+	f.IntVar(&msgLimit, "limit", 0, "返回条数；不传或 0 时按 start/end 自动翻页拉全部（页大小 1000），传 1~10000 则单次返回该数")
 	f.IntVar(&msgOffset, "offset", 0, "分页偏移")
 	f.StringVar(&msgStart, "start", "", "开始时间（YYYYMMDD 或时间戳）")
 	f.StringVar(&msgEnd, "end", "", "结束时间（YYYYMMDD 自动扩到当天 23:59:59，或直接传时间戳）")
