@@ -80,6 +80,7 @@ type appShareXML struct {
 		Title string `xml:"title"`
 		Des   string `xml:"des"`
 		URL   string `xml:"url"`
+		Type  int    `xml:"type"`
 	} `xml:"appmsg"`
 	AppInfo struct {
 		AppName string `xml:"appname"`
@@ -87,7 +88,7 @@ type appShareXML struct {
 }
 
 type revokeXML struct {
-	XMLName  xml.Name `xml:"sysmsg"`
+	XMLName   xml.Name `xml:"sysmsg"`
 	RevokeMsg struct {
 		Content string `xml:"content"`
 	} `xml:"revokemsg"`
@@ -109,6 +110,9 @@ func FormatContent(content string) string {
 	var m appShareXML
 	if err := xml.Unmarshal([]byte(trimmed), &m); err != nil {
 		return content
+	}
+	if m.AppMsg.Type == 8 {
+		return "[emoji]"
 	}
 	title := strings.TrimSpace(m.AppMsg.Title)
 	url := strings.TrimSpace(m.AppMsg.URL)
