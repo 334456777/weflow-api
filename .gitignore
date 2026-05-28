@@ -5,6 +5,5 @@
 coverage.out
 *.out
 .DS_Store
-HTTP-API.md
 config.txt
 weflow.yaml
