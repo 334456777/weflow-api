@@ -69,15 +69,29 @@ var messagesCmd = &cobra.Command{
 		r := newRenderer()
 		if msgChatLab {
 			var all *client.ChatLabMessagesResponse
+			seen := make(map[string]bool)
+			// dedupAppend 把本页消息去重后并入 all。offset 翻页期间群里有新消息进来时，
+			// DESC 排序会让相邻页在边界处重叠，按 platformMessageId 去重可消除这些重复。
+			dedupAppend := func(resp *client.ChatLabMessagesResponse) {
+				if all == nil {
+					container := *resp // 保留 meta/members/chatlab 等元信息
+					container.Messages = nil
+					all = &container
+				}
+				for _, m := range resp.Messages {
+					if id := m.PlatformMessageID; id != "" {
+						if seen[id] {
+							continue
+						}
+						seen[id] = true
+					}
+					all.Messages = append(all.Messages, m)
+				}
+			}
 			for page := 1; ; page++ {
 				resp, err := c.MessagesChatLab(cmd.Context(), p)
 				if err != nil {
 					return err
-				}
-				if all == nil {
-					all = resp
-				} else {
-					all.Messages = append(all.Messages, resp.Messages...)
 				}
 				// 首次返回空时重试一次（API 预热）
 				if page == 1 && len(resp.Messages) == 0 {
@@ -86,9 +100,14 @@ var messagesCmd = &cobra.Command{
 					if err != nil {
 						return err
 					}
-					all.Messages = resp.Messages
 				}
+				dedupAppend(resp)
 				hasMore := resp.Sync != nil && resp.Sync.HasMore
+				// §3 messages 接口不返回 sync 块；缺失时回退到“拉满一页即可能还有更多”，
+				// 否则自动翻页会停在第一页、漏掉区间内更早的消息（参见被回滚的 5652e06）。
+				if !hasMore && autoPage && len(resp.Messages) >= p.Limit {
+					hasMore = true
+				}
 				if !autoPage || !hasMore {
 					break
 				}
